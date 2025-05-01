@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Сканування протоколів</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Сканувати протокол</h1>
+  <input type="file" accept="image/*" id="imageInput" />
+  <button onclick="scanImage()">Зчитати</button>
+  <table>
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Číslo formy</th>
+        <th>Číslo koupelny</th>
+        <th>Typ</th>
+        <th>Дата додавання</th>
+      </tr>
+    </thead>
+    <tbody id="resultsTable"></tbody>
+  </table>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <script src="firebase.js"></script>
+  <script src="ocr.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
