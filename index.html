@@ -41,6 +41,10 @@
     button:hover {
       background-color: #0077cc;
     }
+    .marked {
+      background-color: green !important;
+      color: white !important;
+    }
     .hidden {
       display: none;
     }
@@ -58,10 +62,6 @@
       text-align: center;
       border: 1px solid #444;
       color: #fff;
-    }
-    .marked {
-      background-color: green !important;
-      color: white !important;
     }
   </style>
 </head>
@@ -131,6 +131,10 @@
       return "data_" + currentUser + "_" + currentSection;
     }
 
+    function getMarkedKey() {
+      return "marked_" + currentUser + "_" + currentSection;
+    }
+
     function saveToLocal() {
       const zakazka = document.getElementById("zakazka").value.trim();
       const koupelna = document.getElementById("koupelna").value.trim();
@@ -148,7 +152,7 @@
       data.push(row);
       localStorage.setItem(getStorageKey(), JSON.stringify(data));
 
-      addRowToTable(row);
+      addRowToTable(row, data.length - 1);
 
       document.getElementById("zakazka").value = "";
       document.getElementById("koupelna").value = "";
@@ -160,12 +164,14 @@
       tbody.innerHTML = "";
 
       const data = JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
-      data.forEach(row => {
-        addRowToTable(row);
+      const marked = JSON.parse(localStorage.getItem(getMarkedKey()) || "[]");
+
+      data.forEach((row, index) => {
+        addRowToTable(row, index, marked.includes(index));
       });
     }
 
-    function addRowToTable(row) {
+    function addRowToTable(row, index, isMarked = false) {
       const tbody = document.getElementById("dataTableBody");
       const tr = document.createElement("tr");
 
@@ -177,11 +183,21 @@
 
       const markTd = document.createElement("td");
       const markBtn = document.createElement("button");
-      markBtn.innerText = "Označit";
+      markBtn.innerText = isMarked ? "Označeno" : "Označit";
+      if (isMarked) {
+        markBtn.classList.add("marked");
+        markBtn.disabled = true;
+      }
       markBtn.onclick = () => {
         markBtn.innerText = "Označeno";
         markBtn.classList.add("marked");
         markBtn.disabled = true;
+
+        let marked = JSON.parse(localStorage.getItem(getMarkedKey()) || "[]");
+        if (!marked.includes(index)) {
+          marked.push(index);
+          localStorage.setItem(getMarkedKey(), JSON.stringify(marked));
+        }
       };
       markTd.appendChild(markBtn);
       tr.appendChild(markTd);
@@ -192,11 +208,12 @@
       deleteBtn.onclick = () => {
         tr.remove();
         let data = JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
-        const index = Array.from(tbody.children).indexOf(tr);
-        if (index > -1) {
-          data.splice(index, 1);
-          localStorage.setItem(getStorageKey(), JSON.stringify(data));
-        }
+        let marked = JSON.parse(localStorage.getItem(getMarkedKey()) || "[]");
+        data.splice(index, 1);
+        marked = marked.filter(i => i !== index);
+        localStorage.setItem(getStorageKey(), JSON.stringify(data));
+        localStorage.setItem(getMarkedKey(), JSON.stringify(marked));
+        loadTableFromStorage(); // перезавантажити індекси
       };
       deleteTd.appendChild(deleteBtn);
       tr.appendChild(deleteTd);
