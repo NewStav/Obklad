@@ -1,31 +1,217 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="cs">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Сканування протоколів</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Skener protokolů</title>
+  <style>
+    body {
+      background-image: url('background.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #fff;
+    }
+    .container {
+      background-color: rgba(0, 0, 0, 0.7);
+      max-width: 420px;
+      margin: 30px auto;
+      padding: 20px;
+      border-radius: 12px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+    }
+    input {
+      background-color: #333;
+      color: #fff;
+    }
+    button {
+      background-color: #00aaff;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0077cc;
+    }
+    .hidden {
+      display: none;
+    }
+    .table-wrapper {
+      margin-top: 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: rgba(255,255,255,0.1);
+      font-size: 13px;
+    }
+    th, td {
+      padding: 6px;
+      text-align: center;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    .marked {
+      background-color: green !important;
+      color: white !important;
+    }
+  </style>
 </head>
 <body>
-  <h1>Сканувати протокол</h1>
-  <input type="file" accept="image/*" id="imageInput" />
-  <button onclick="scanImage()">Зчитати</button>
-  <table>
-    <thead>
-      <tr>
-        <th>№</th>
-        <th>Číslo formy</th>
-        <th>Číslo koupelny</th>
-        <th>Typ</th>
-        <th>Дата додавання</th>
-      </tr>
-    </thead>
-    <tbody id="resultsTable"></tbody>
-  </table>
+  <div class="container" id="loginContainer">
+    <input type="email" id="email" placeholder="Zadejte svůj email" />
+    <button onclick="login()">Přihlásit se</button>
+  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
-  <script src="firebase.js"></script>
-  <script src="ocr.js"></script>
-  <script src="main.js"></script>
+  <div class="container hidden" id="sectionContainer">
+    <button onclick="selectSection('Ploškování')">Ploškování</button>
+    <button onclick="selectSection('Silikonování')">Silikonování</button>
+    <button onclick="selectSection('Spárování')">Spárování</button>
+  </div>
+
+  <div class="container hidden" id="formContainer">
+    <button onclick="goBack()">Zpět</button>
+    <input type="text" id="zakazka" placeholder="Číslo zakázky" />
+    <input type="text" id="koupelna" placeholder="Číslo koupelny" />
+    <input type="text" id="typ" placeholder="Typ (např. 2.1L)" />
+    <button onclick="saveToLocal()">Uložit</button>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Zak.</th>
+            <th>Koup.</th>
+            <th>Typ</th>
+            <th>Datum</th>
+            <th>Ozn.</th>
+            <th>Smazat</th>
+          </tr>
+        </thead>
+        <tbody id="dataTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = "";
+    let currentSection = "";
+
+    function login() {
+      const email = document.getElementById("email").value.trim();
+      if (email) {
+        localStorage.setItem("userEmail", email);
+        currentUser = email;
+        document.getElementById("loginContainer").classList.add("hidden");
+        document.getElementById("sectionContainer").classList.remove("hidden");
+      }
+    }
+
+    function selectSection(name) {
+      currentSection = name;
+      document.getElementById("sectionContainer").classList.add("hidden");
+      document.getElementById("formContainer").classList.remove("hidden");
+      loadTableFromStorage();
+    }
+
+    function goBack() {
+      document.getElementById("formContainer").classList.add("hidden");
+      document.getElementById("sectionContainer").classList.remove("hidden");
+    }
+
+    function getStorageKey() {
+      return "data_" + currentUser + "_" + currentSection;
+    }
+
+    function saveToLocal() {
+      const zakazka = document.getElementById("zakazka").value.trim();
+      const koupelna = document.getElementById("koupelna").value.trim();
+      const typ = document.getElementById("typ").value.trim();
+      const datum = new Date().toLocaleDateString();
+
+      if (!zakazka || !koupelna || !typ) {
+        alert("Vyplňte prosím všechna pole.");
+        return;
+      }
+
+      const row = [zakazka, koupelna, typ, datum, ""];
+
+      let data = JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
+      data.push(row);
+      localStorage.setItem(getStorageKey(), JSON.stringify(data));
+
+      addRowToTable(row);
+
+      document.getElementById("zakazka").value = "";
+      document.getElementById("koupelna").value = "";
+      document.getElementById("typ").value = "";
+    }
+
+    function loadTableFromStorage() {
+      const tbody = document.getElementById("dataTableBody");
+      tbody.innerHTML = "";
+
+      const data = JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
+      data.forEach(row => {
+        addRowToTable(row);
+      });
+    }
+
+    function addRowToTable(row) {
+      const tbody = document.getElementById("dataTableBody");
+      const tr = document.createElement("tr");
+
+      for (let i = 0; i < 4; i++) {
+        const td = document.createElement("td");
+        td.innerText = row[i];
+        tr.appendChild(td);
+      }
+
+      const markTd = document.createElement("td");
+      const markBtn = document.createElement("button");
+      markBtn.innerText = "Označit";
+      markBtn.onclick = () => {
+        markBtn.innerText = "Označeno";
+        markBtn.classList.add("marked");
+        markBtn.disabled = true;
+      };
+      markTd.appendChild(markBtn);
+      tr.appendChild(markTd);
+
+      const deleteTd = document.createElement("td");
+      const deleteBtn = document.createElement("button");
+      deleteBtn.innerText = "Smazat";
+      deleteBtn.onclick = () => {
+        tr.remove();
+        let data = JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
+        const index = Array.from(tbody.children).indexOf(tr);
+        if (index > -1) {
+          data.splice(index, 1);
+          localStorage.setItem(getStorageKey(), JSON.stringify(data));
+        }
+      };
+      deleteTd.appendChild(deleteBtn);
+      tr.appendChild(deleteTd);
+
+      tbody.insertBefore(tr, tbody.firstChild);
+    }
+
+    window.onload = () => {
+      const savedEmail = localStorage.getItem("userEmail");
+      if (savedEmail) {
+        currentUser = savedEmail;
+        document.getElementById("loginContainer").classList.add("hidden");
+        document.getElementById("sectionContainer").classList.remove("hidden");
+      }
+    };
+  </script>
 </body>
 </html>
